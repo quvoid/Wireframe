@@ -1,20 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useProjectStore } from './store/projectStore';
-import { Layout, MousePointer2 } from 'lucide-react';
+import { Layout } from 'lucide-react';
 import { Canvas } from './components/canvas/Canvas';
 import { Sidebar } from './components/editor/Sidebar';
+import { PropertiesPanel } from './components/editor/PropertiesPanel';
 import { DndContext, DragOverlay, useSensor, useSensors, PointerSensor, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core';
 import { WireframeComponentRenderer } from './components/wireframe/WireframeComponentRenderer';
 import type { WireframeComponent } from './types';
 
 function App() {
-  const { activeScreenId, project, addScreen, screens, addComponent } = useProjectStore(state => ({
-    activeScreenId: state.activeScreenId,
-    project: state.project,
-    addScreen: state.addScreen,
-    screens: state.project.screens,
-    addComponent: state.addComponent
-  }));
+  const project = useProjectStore(state => state.project);
+  const addScreen = useProjectStore(state => state.addScreen);
+  const screensLength = useProjectStore(state => state.project.screens.length);
+  const addComponent = useProjectStore(state => state.addComponent);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -28,10 +26,10 @@ function App() {
 
   useEffect(() => {
     // Add a default screen if none exists
-    if (screens.length === 0) {
+    if (screensLength === 0) {
       addScreen();
     }
-  }, [screens.length, addScreen]);
+  }, [screensLength, addScreen]);
 
   const handleDragStart = (event: DragStartEvent) => {
     if (event.active.data.current?.isSidebarItem) {
@@ -121,7 +119,7 @@ function App() {
             <span className="font-semibold text-lg">{project.name}</span>
           </div>
           <div className="flex items-center gap-4 text-sm text-neutral-400">
-            <span>{project.screens.length} Screens</span>
+            <span>{screensLength} Screens</span>
             <div className="h-4 w-[1px] bg-neutral-700"></div>
             <span>Draft</span>
           </div>
@@ -137,32 +135,7 @@ function App() {
           </main>
 
           {/* Right Sidebar - Properties */}
-          <aside className="w-72 border-l border-neutral-800 bg-neutral-900 flex flex-col z-20">
-            <div className="p-4 border-b border-neutral-800">
-              <h2 className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Properties</h2>
-            </div>
-            <div className="flex-1 p-4 text-sm text-neutral-400">
-              <div className="flex items-center gap-2 mb-4">
-                <MousePointer2 size={16} />
-                <span>Select an element to edit</span>
-              </div>
-
-              {activeScreenId && (
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-xs">Screen Name</label>
-                    <input type="text" className="w-full bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-white" value="Screen 1" readOnly />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs">Device Preset</label>
-                    <select className="w-full bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-white">
-                      <option>iPhone 14 Pro</option>
-                    </select>
-                  </div>
-                </div>
-              )}
-            </div>
-          </aside>
+          <PropertiesPanel />
         </div>
       </div>
       <DragOverlay>
