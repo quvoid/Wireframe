@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useProjectStore } from './store/projectStore';
-import { Layout, Smartphone, MousePointer2 } from 'lucide-react';
+import { Layout, MousePointer2 } from 'lucide-react';
+import { Canvas } from './components/canvas/Canvas';
 
 function App() {
   const { activeScreenId, project, addScreen, screens } = useProjectStore(state => ({
@@ -55,26 +56,8 @@ function App() {
         </aside>
 
         {/* Center - Canvas Area */}
-        <main className="flex-1 bg-neutral-950 relative overflow-hidden flex items-center justify-center">
-          {activeScreenId ? (
-            <div className="bg-white text-black shadow-2xl relative transition-all"
-              style={{ width: 393, height: 852, borderRadius: 40 }}>
-              <div className="absolute top-0 left-0 right-0 h-10 bg-black/5 flex items-center justify-center text-[10px] text-black/50">
-                Status Bar
-              </div>
-              <div className="p-4 flex items-center justify-center h-full text-neutral-400">
-                Empty Screen
-              </div>
-            </div>
-          ) : (
-            <div className="text-neutral-500 flex flex-col items-center">
-              <Smartphone className="w-12 h-12 mb-4 opacity-20" />
-              <p>No Screen Selected</p>
-              <button onClick={() => addScreen()} className="mt-4 px-4 py-2 bg-blue-600 rounded text-sm hover:bg-blue-500">
-                Create Screen
-              </button>
-            </div>
-          )}
+        <main className="flex-1 bg-neutral-950 relative overflow-hidden flex flex-col">
+          <Canvas />
         </main>
 
         {/* Right Sidebar - Properties */}
