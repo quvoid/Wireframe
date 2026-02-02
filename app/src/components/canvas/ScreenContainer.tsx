@@ -2,6 +2,7 @@ import type { WireframeScreen } from '../../types';
 import { WireframeComponentRenderer } from '../wireframe/WireframeComponentRenderer';
 import { cn } from '../../utils/cn';
 import { useProjectStore } from '../../store/projectStore';
+import { useDroppable } from '@dnd-kit/core';
 
 interface Props {
     screen: WireframeScreen;
@@ -13,11 +14,22 @@ export function ScreenContainer({ screen, isActive }: Props) {
     const selectComponent = useProjectStore(state => state.selectComponent);
     const selectedComponentIds = useProjectStore(state => state.selectedComponentIds);
 
+    const { setNodeRef, isOver } = useDroppable({
+        id: screen.id,
+        data: {
+            isScreen: true,
+            screenId: screen.id
+        }
+    });
+
     return (
         <div
+            ref={setNodeRef}
+            id={screen.id} // Important for geometry calculation
             className={cn(
                 "relative bg-white shadow-2xl transition-all duration-300 overflow-hidden",
-                isActive ? "ring-4 ring-blue-500/50 scale-100 z-10" : "opacity-80 scale-95 hover:opacity-100 hover:scale-[0.98]"
+                isActive ? "ring-4 ring-blue-500/50 scale-100 z-10" : "opacity-80 scale-95 hover:opacity-100 hover:scale-[0.98]",
+                isOver && "ring-4 ring-green-500/50"
             )}
             style={{
                 width: screen.dimensions.width,
