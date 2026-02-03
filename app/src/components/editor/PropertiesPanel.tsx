@@ -1,11 +1,14 @@
 import { useProjectStore } from '../../store/projectStore';
 import { MousePointer2, Type, Layout, Trash2 } from 'lucide-react';
+import { DEVICE_PRESETS } from '../../constants/presets';
+import type { DevicePresetKey } from '../../constants/presets';
 
 export function PropertiesPanel() {
     const activeScreenId = useProjectStore(state => state.activeScreenId);
     const selectedComponentIds = useProjectStore(state => state.selectedComponentIds);
     const project = useProjectStore(state => state.project);
     const updateComponent = useProjectStore(state => state.updateComponent);
+    const updateScreen = useProjectStore(state => state.updateScreen);
 
     // Find the selected component
     // For now support single selection editing
@@ -238,8 +241,14 @@ export function PropertiesPanel() {
                         </div>
                         <div className="space-y-1">
                             <label className="text-[10px] text-neutral-400">Preset</label>
-                            <select disabled className="w-full bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-sm text-neutral-500">
-                                <option>{activeScreen.devicePreset}</option>
+                            <select
+                                value={activeScreen.devicePreset}
+                                onChange={(e) => updateScreen(activeScreen.id, { devicePreset: e.target.value as DevicePresetKey })}
+                                className="w-full bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-sm text-white"
+                            >
+                                {Object.entries(DEVICE_PRESETS).map(([key, preset]) => (
+                                    <option key={key} value={key}>{preset.name}</option>
+                                ))}
                             </select>
                         </div>
                     </div>

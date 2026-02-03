@@ -7,6 +7,13 @@ interface Props {
 
 export function WireframeComponentRenderer({ component }: Props) {
     switch (component.type) {
+        case 'rectangle':
+            return (
+                <div
+                    className="w-full h-full border border-neutral-400"
+                    style={{ backgroundColor: component.properties.background || '#e5e5e5' }}
+                />
+            );
         case 'button':
             return (
                 <button

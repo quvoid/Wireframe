@@ -1,4 +1,6 @@
-export type DevicePreset = 'iphone-14-pro' | 'desktop-hd' | 'ipad-pro-11' | 'custom';
+import type { DevicePresetKey } from './constants/presets';
+
+export type DevicePreset = DevicePresetKey;
 
 export interface BoxSize {
     width: number;

@@ -1,16 +1,20 @@
 import { create } from 'zustand';
 import type { Project, WireframeScreen, WireframeComponent } from '../types';
+import { DEVICE_PRESETS } from '../constants/presets';
 import { v4 as uuidv4 } from 'uuid';
 
 interface ProjectState {
     project: Project;
     activeScreenId: string | null;
     selectedComponentIds: string[];
+    activeTool: 'select' | 'rectangle';
 
     // Actions
     createProject: (name: string) => void;
     addScreen: (preset?: WireframeScreen['devicePreset']) => void;
+    updateScreen: (screenId: string, updates: Partial<WireframeScreen>) => void;
     selectScreen: (id: string) => void;
+    setTool: (tool: 'select' | 'rectangle') => void;
 
     addComponent: (screenId: string, component: Omit<WireframeComponent, 'id'>) => void;
     updateComponent: (screenId: string, componentId: string, updates: Partial<Omit<WireframeComponent, 'id'>>) => void;
@@ -33,6 +37,7 @@ export const useProjectStore = create<ProjectState>((set) => ({
     project: initialProject,
     activeScreenId: null,
     selectedComponentIds: [],
+    activeTool: 'select',
 
     createProject: (name) => set({
         project: { ...initialProject, id: uuidv4(), name },
@@ -40,11 +45,12 @@ export const useProjectStore = create<ProjectState>((set) => ({
     }),
 
     addScreen: (preset = 'iphone-14-pro') => set((state) => {
+        const presetData = DEVICE_PRESETS[preset] || DEVICE_PRESETS['iphone-14-pro'];
         const newScreen: WireframeScreen = {
             id: uuidv4(),
             name: `Screen ${state.project.screens.length + 1}`,
             devicePreset: preset,
-            dimensions: { width: 393, height: 852 }, // Default iPhone 14 Pro
+            dimensions: presetData.dimensions,
             background: '#ffffff',
             components: []
         };
@@ -59,6 +65,32 @@ export const useProjectStore = create<ProjectState>((set) => ({
     }),
 
     selectScreen: (id) => set({ activeScreenId: id }),
+    setTool: (tool) => set({ activeTool: tool }),
+
+    updateScreen: (screenId, updates) => set((state) => {
+        const updatedScreens = state.project.screens.map(screen => {
+            if (screen.id !== screenId) return screen;
+
+            // If preset is changing, update dimensions too
+            if (updates.devicePreset && updates.devicePreset !== screen.devicePreset) {
+                const presetData = DEVICE_PRESETS[updates.devicePreset] || DEVICE_PRESETS['iphone-14-pro'];
+                return {
+                    ...screen,
+                    ...updates,
+                    dimensions: presetData.dimensions
+                };
+            }
+
+            return { ...screen, ...updates };
+        });
+
+        return {
+            project: {
+                ...state.project,
+                screens: updatedScreens
+            }
+        };
+    }),
 
     addComponent: (screenId, componentData) => set((state) => {
         const newComponent: WireframeComponent = {

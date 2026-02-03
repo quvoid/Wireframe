@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { WireframeScreen } from '../../types';
 import { WireframeComponentRenderer } from '../wireframe/WireframeComponentRenderer';
 import { cn } from '../../utils/cn';
@@ -13,6 +14,63 @@ export function ScreenContainer({ screen, isActive }: Props) {
     const selectScreen = useProjectStore(state => state.selectScreen);
     const selectComponent = useProjectStore(state => state.selectComponent);
     const selectedComponentIds = useProjectStore(state => state.selectedComponentIds);
+    const activeTool = useProjectStore(state => state.activeTool);
+    const setTool = useProjectStore(state => state.setTool);
+    const addComponent = useProjectStore(state => state.addComponent);
+
+    const [isDrawing, setIsDrawing] = useState(false);
+    const [startPos, setStartPos] = useState({ x: 0, y: 0 });
+    const [currentPos, setCurrentPos] = useState({ x: 0, y: 0 });
+
+    const handleMouseDown = (e: React.MouseEvent) => {
+        if (activeTool === 'rectangle') {
+            e.stopPropagation();
+            const rect = e.currentTarget.getBoundingClientRect();
+            // Calculate position relative to the screen scale if any? 
+            // The screen container uses scale transform. 
+            // However, e.clientX is viewport. getBoundingClientRect typically accounts for transforms.
+            // But we need coordinate inside the element.
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            setStartPos({ x, y });
+            setCurrentPos({ x, y });
+            setIsDrawing(true);
+        } else {
+            e.stopPropagation();
+            selectScreen(screen.id);
+        }
+    };
+
+    const handleMouseMove = (e: React.MouseEvent) => {
+        if (isDrawing) {
+            const rect = e.currentTarget.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            setCurrentPos({ x, y });
+        }
+    };
+
+    const handleMouseUp = () => {
+        if (isDrawing) {
+            setIsDrawing(false);
+
+            const width = Math.abs(currentPos.x - startPos.x);
+            const height = Math.abs(currentPos.y - startPos.y);
+            const x = Math.min(currentPos.x, startPos.x);
+            const y = Math.min(currentPos.y, startPos.y);
+
+            if (width > 10 && height > 10) {
+                addComponent(screen.id, {
+                    type: 'rectangle',
+                    name: 'Rectangle',
+                    position: { x, y },
+                    size: { width, height },
+                    properties: { background: '#e5e5e5' }
+                });
+                setTool('select');
+            }
+        }
+    };
 
     const { setNodeRef, isOver } = useDroppable({
         id: screen.id,
@@ -34,12 +92,14 @@ export function ScreenContainer({ screen, isActive }: Props) {
             style={{
                 width: screen.dimensions.width,
                 height: screen.dimensions.height,
-                borderRadius: 40 // Mobile preset default
+                borderRadius: screen.dimensions.width > 1000 ? 0 : 40, // Simple heuristic for rounded corners
+                cursor: activeTool === 'rectangle' ? 'crosshair' : 'default'
             }}
-            onClick={(e) => {
-                e.stopPropagation();
-                selectScreen(screen.id);
-            }}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+        // Remove onClick as we handle selection in onMouseDown now
         >
             {/* Status Bar Placeholder */}
             <div className="absolute top-0 left-0 right-0 h-10 z-10 bg-black/5 flex items-center justify-center pointer-events-none">
@@ -79,6 +139,19 @@ export function ScreenContainer({ screen, isActive }: Props) {
             <div className="absolute -top-8 left-0 text-sm font-medium text-neutral-500 whitespace-nowrap">
                 {screen.name}
             </div>
+
+            {/* Drawing Preview */}
+            {isDrawing && (
+                <div
+                    className="absolute border-2 border-blue-500 bg-blue-500/10 z-50 pointer-events-none"
+                    style={{
+                        left: Math.min(startPos.x, currentPos.x),
+                        top: Math.min(startPos.y, currentPos.y),
+                        width: Math.abs(currentPos.x - startPos.x),
+                        height: Math.abs(currentPos.y - startPos.y),
+                    }}
+                />
+            )}
         </div>
     );
 }
