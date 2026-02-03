@@ -1,6 +1,6 @@
 import { DraggableSidebarItem } from './DraggableSidebarItem';
 import { useProjectStore } from '../../store/projectStore';
-import { MousePointer2, Square } from 'lucide-react';
+import { MousePointer2, Square, Plug } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
 const SIDEBAR_ITEMS = [
@@ -8,6 +8,7 @@ const SIDEBAR_ITEMS = [
     { type: 'input', label: 'Input Field' },
     { type: 'card', label: 'Card' },
     { type: 'text', label: 'Text Block' },
+    { type: 'line', label: 'Line Divider' },
 ];
 
 export function Sidebar() {
@@ -42,6 +43,18 @@ export function Sidebar() {
                     >
                         <Square size={14} />
                         Rect
+                    </button>
+                    <button
+                        onClick={() => setTool('prototype')}
+                        className={cn(
+                            "flex-1 flex items-center justify-center gap-2 p-2 rounded text-xs font-medium transition-colors",
+                            activeTool === 'prototype'
+                                ? "bg-blue-600 text-white"
+                                : "bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-white"
+                        )}
+                    >
+                        <Plug size={14} />
+                        Proto
                     </button>
                 </div>
             </div>

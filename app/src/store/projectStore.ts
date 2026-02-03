@@ -7,18 +7,21 @@ interface ProjectState {
     project: Project;
     activeScreenId: string | null;
     selectedComponentIds: string[];
-    activeTool: 'select' | 'rectangle';
+    activeTool: 'select' | 'rectangle' | 'prototype' | 'line';
 
     // Actions
     createProject: (name: string) => void;
     addScreen: (preset?: WireframeScreen['devicePreset']) => void;
     updateScreen: (screenId: string, updates: Partial<WireframeScreen>) => void;
     selectScreen: (id: string) => void;
-    setTool: (tool: 'select' | 'rectangle') => void;
+    setTool: (tool: 'select' | 'rectangle' | 'prototype' | 'line') => void;
 
     addComponent: (screenId: string, component: Omit<WireframeComponent, 'id'>) => void;
     updateComponent: (screenId: string, componentId: string, updates: Partial<Omit<WireframeComponent, 'id'>>) => void;
     removeComponent: (screenId: string, componentId: string) => void;
+
+    addInteraction: (screenId: string, componentId: string, targetScreenId: string) => void;
+    removeInteraction: (screenId: string, componentId: string) => void;
 
     selectComponent: (id: string, multi?: boolean) => void;
     deselectAll: () => void;
@@ -158,6 +161,36 @@ export const useProjectStore = create<ProjectState>((set) => ({
             },
             selectedComponentIds: state.selectedComponentIds.filter(id => id !== componentId)
         };
+    }),
+
+    addInteraction: (screenId, componentId, targetScreenId) => set((state) => {
+        const updatedScreens = state.project.screens.map(screen => {
+            if (screen.id !== screenId) return screen;
+            return {
+                ...screen,
+                components: screen.components.map(comp =>
+                    comp.id === componentId
+                        ? { ...comp, interaction: { action: 'navigate' as const, targetScreenId } }
+                        : comp
+                )
+            };
+        });
+        return { project: { ...state.project, screens: updatedScreens } };
+    }),
+
+    removeInteraction: (screenId, componentId) => set((state) => {
+        const updatedScreens = state.project.screens.map(screen => {
+            if (screen.id !== screenId) return screen;
+            return {
+                ...screen,
+                components: screen.components.map(comp => {
+                    if (comp.id !== componentId) return comp;
+                    const { interaction, ...rest } = comp;
+                    return rest;
+                })
+            };
+        });
+        return { project: { ...state.project, screens: updatedScreens } };
     }),
 
     selectComponent: (id, multi = false) => set((state) => ({

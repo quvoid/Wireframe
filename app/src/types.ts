@@ -12,6 +12,11 @@ export interface Position {
     y: number;
 }
 
+export interface Interaction {
+    action: 'navigate';
+    targetScreenId: string;
+}
+
 export interface WireframeComponent {
     id: string;
     type: string; // 'button' | 'text' | 'input' | 'card' etc.
@@ -22,6 +27,7 @@ export interface WireframeComponent {
     style?: Record<string, any>;
     parentId?: string;
     children?: string[]; // IDs of children
+    interaction?: Interaction;
 }
 
 export interface WireframeScreen {

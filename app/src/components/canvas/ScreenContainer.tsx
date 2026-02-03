@@ -8,9 +8,11 @@ import { useDroppable } from '@dnd-kit/core';
 interface Props {
     screen: WireframeScreen;
     isActive: boolean;
+    onInteractionStart?: (screenId: string, componentId: string, rect: { x: number, y: number, w: number, h: number }) => void;
+    onInteractionDrop?: (screenId: string) => void;
 }
 
-export function ScreenContainer({ screen, isActive }: Props) {
+export function ScreenContainer({ screen, isActive, ...props }: Props) {
     const selectScreen = useProjectStore(state => state.selectScreen);
     const selectComponent = useProjectStore(state => state.selectComponent);
     const selectedComponentIds = useProjectStore(state => state.selectedComponentIds);
@@ -44,6 +46,12 @@ export function ScreenContainer({ screen, isActive }: Props) {
             setStartPos({ x, y });
             setCurrentPos({ x, y });
             setIsDrawing(true);
+            setCurrentPos({ x, y });
+            setIsDrawing(true);
+        } else if (activeTool === 'prototype') {
+            e.stopPropagation();
+            // Allow selecting screen target on drop?
+            // Actually, we handle drop separately.
         } else {
             e.stopPropagation();
             selectScreen(screen.id);
@@ -119,9 +127,29 @@ export function ScreenContainer({ screen, isActive }: Props) {
         } else if (dragState) {
             setDragState(null);
         }
+
+        if (activeTool === 'prototype' && props.onInteractionDrop) {
+            props.onInteractionDrop(screen.id);
+        }
     };
 
     const handleCompMouseDown = (e: React.MouseEvent, comp: any, handle?: string) => {
+        if (activeTool === 'prototype') {
+            e.stopPropagation();
+            if (props.onInteractionStart) {
+                const rect = {
+                    x: comp.position.x,
+                    y: comp.position.y,
+                    w: comp.size.width,
+                    h: comp.size.height
+                };
+                // We pass screen-relative coordinates. Canvas needs to convert or use them.
+                // Actually Canvas expects them to be passed.
+                props.onInteractionStart(screen.id, comp.id, rect);
+            }
+            return;
+        }
+
         if (activeTool !== 'select') return;
         e.stopPropagation();
 
@@ -199,6 +227,11 @@ export function ScreenContainer({ screen, isActive }: Props) {
                             onMouseDown={(e) => handleCompMouseDown(e, comp)}
                         >
                             <WireframeComponentRenderer component={comp} />
+
+                            {/* Prototype Handle */}
+                            {activeTool === 'prototype' && (
+                                <div className="absolute top-1/2 -right-3 -translate-y-1/2 w-4 h-4 rounded-full bg-blue-500 border-2 border-white cursor-crosshair z-20 hover:scale-125 transition-transform shadow-sm" />
+                            )}
 
                             {/* Resize Handles */}
                             {isSelected && (

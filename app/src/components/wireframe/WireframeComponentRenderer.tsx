@@ -14,6 +14,12 @@ export function WireframeComponentRenderer({ component }: Props) {
                     style={{ backgroundColor: component.properties.background || '#e5e5e5' }}
                 />
             );
+        case 'line':
+            return (
+                <div className="w-full h-full flex items-center justify-center pointer-events-none">
+                    <div className="w-full h-[2px] bg-neutral-400" />
+                </div>
+            );
         case 'button':
             return (
                 <button

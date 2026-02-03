@@ -9,10 +9,16 @@ export function Canvas() {
     const activeScreenId = useProjectStore(state => state.activeScreenId);
     const selectedComponentIds = useProjectStore(state => state.selectedComponentIds);
     const removeComponent = useProjectStore(state => state.removeComponent);
+    const addInteraction = useProjectStore(state => state.addInteraction);
+
 
     const [pan, setPan] = useState({ x: 0, y: 0 });
     const [zoom, setZoom] = useState(1);
     const [isPanning, setIsPanning] = useState(false);
+
+    // Prototyping State
+    const [interactionSource, setInteractionSource] = useState<{ screenId: string, componentId: string, startPos: { x: number, y: number } } | null>(null);
+    const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
     // State to track middle mouse drag
     const lastMousePos = useRef({ x: 0, y: 0 });
@@ -65,10 +71,38 @@ export function Canvas() {
             setPan(p => ({ x: p.x + dx, y: p.y + dy }));
             lastMousePos.current = { x: e.clientX, y: e.clientY };
         }
+
+        if (interactionSource) {
+            const rect = e.currentTarget.getBoundingClientRect();
+            const x = (e.clientX - rect.left - pan.x) / zoom;
+            const y = (e.clientY - rect.top - pan.y) / zoom;
+            setMousePos({ x, y });
+        }
+    };
+
+    const onComponentInteractionStart = (screenId: string, componentId: string, componentRect: { x: number, y: number, w: number, h: number }) => {
+        setInteractionSource({
+            screenId,
+            componentId,
+            startPos: {
+                x: componentRect.x + componentRect.w,
+                y: componentRect.y + componentRect.h / 2
+            }
+        });
+    };
+
+    const onScreenInteractionDrop = (targetScreenId: string) => {
+        if (interactionSource && interactionSource.screenId !== targetScreenId) {
+            addInteraction(interactionSource.screenId, interactionSource.componentId, targetScreenId);
+            setInteractionSource(null);
+        }
     };
 
     const handleMouseUp = () => {
         setIsPanning(false);
+        if (interactionSource) {
+            setInteractionSource(null);
+        }
     };
 
     return (
@@ -91,8 +125,63 @@ export function Canvas() {
                         key={screen.id}
                         screen={screen}
                         isActive={screen.id === activeScreenId}
+                        onInteractionStart={onComponentInteractionStart}
+                        onInteractionDrop={onScreenInteractionDrop}
                     />
                 ))}
+
+                {/* Interaction Layer (SVG) */}
+                <svg className="absolute inset-0 pointer-events-none overflow-visible" style={{ zIndex: 100 }}>
+                    {screens.flatMap(sourceScreen =>
+                        sourceScreen.components
+                            .filter(c => c.interaction?.action === 'navigate')
+                            .map(c => {
+                                const targetScreen = screens.find(s => s.id === c.interaction?.targetScreenId);
+                                if (!targetScreen) return null;
+
+                                // Calculate positions
+                                // Source: Center of component (relative to canvas)
+                                const startX = sourceScreen.position.x + c.position.x + (c.size.width / 2);
+                                const startY = sourceScreen.position.y + c.position.y + (c.size.height / 2);
+
+                                // Target: Top-Left of target screen (or left-center)
+                                const endX = targetScreen.position.x;
+                                const endY = targetScreen.position.y + (targetScreen.dimensions.height / 2);
+
+                                // Bezier Curve
+                                const controlPoint1 = { x: startX + 100, y: startY };
+                                const controlPoint2 = { x: endX - 100, y: endY };
+
+                                const path = `M ${startX} ${startY} C ${controlPoint1.x} ${controlPoint1.y}, ${controlPoint2.x} ${controlPoint2.y}, ${endX} ${endY}`;
+
+                                return (
+                                    <g key={`${c.id}-${targetScreen.id}`}>
+                                        <path
+                                            d={path}
+                                            stroke="#3b82f6"
+                                            strokeWidth="2"
+                                            fill="none"
+                                            strokeDasharray="4 4"
+                                        />
+                                        <circle cx={startX} cy={startY} r="4" fill="#3b82f6" />
+                                        <polygon points={`${endX},${endY} ${endX - 10},${endY - 5} ${endX - 10},${endY + 5}`} fill="#3b82f6" />
+                                    </g>
+                                );
+                            })
+                    )}
+
+                    {/* Ghost Line */}
+                    {interactionSource && (
+                        <path
+                            d={`M ${interactionSource.startPos.x} ${interactionSource.startPos.y} L ${mousePos.x} ${mousePos.y}`}
+                            stroke="#3b82f6"
+                            strokeWidth="2"
+                            fill="none"
+                            strokeDasharray="4 4"
+                            opacity="0.5"
+                        />
+                    )}
+                </svg>
             </div>
 
             {/* Controls Overlay */}

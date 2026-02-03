@@ -80,6 +80,9 @@ function App() {
         } else if (type === 'text') {
           size = { width: 100, height: 30 };
           properties = { text: 'TextBlock', fontSize: 16 };
+        } else if (type === 'line') {
+          size = { width: 200, height: 20 };
+          properties = {};
         }
 
         addComponent(screenId, {
