@@ -1,6 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useProjectStore } from '../../store/projectStore';
 import { ScreenContainer } from './ScreenContainer';
+
 
 export function Canvas() {
     const screens = useProjectStore(state => state.project.screens);
@@ -8,10 +9,16 @@ export function Canvas() {
     const selectedComponentIds = useProjectStore(state => state.selectedComponentIds);
     const removeComponent = useProjectStore(state => state.removeComponent);
 
+    const [pan, setPan] = useState({ x: 0, y: 0 });
+    const [zoom, setZoom] = useState(1);
+    const [isPanning, setIsPanning] = useState(false);
+
+    // State to track middle mouse drag
+    const lastMousePos = useRef({ x: 0, y: 0 });
+
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if ((e.key === 'Delete' || e.key === 'Backspace') && selectedComponentIds.length > 0 && activeScreenId) {
-                // Ignore if typing in an input
                 const target = e.target as HTMLElement;
                 if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
 
@@ -25,18 +32,79 @@ export function Canvas() {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [selectedComponentIds, activeScreenId, removeComponent]);
 
+    const handleWheel = (e: React.WheelEvent) => {
+        if (e.ctrlKey || e.metaKey) {
+            // Zoom
+            e.preventDefault();
+            const scaleAmount = -e.deltaY * 0.001;
+            setZoom(z => Math.min(Math.max(0.1, z + scaleAmount), 5));
+        } else {
+            // Pan
+            setPan(p => ({
+                x: p.x - e.deltaX,
+                y: p.y - e.deltaY
+            }));
+        }
+    };
+
+    const handleMouseDown = (e: React.MouseEvent) => {
+        // Middle mouse button
+        if (e.button === 1 || (e.button === 0 && e.altKey)) {
+            e.preventDefault();
+            setIsPanning(true);
+            lastMousePos.current = { x: e.clientX, y: e.clientY };
+        }
+    };
+
+    const handleMouseMove = (e: React.MouseEvent) => {
+        if (isPanning) {
+            const dx = e.clientX - lastMousePos.current.x;
+            const dy = e.clientY - lastMousePos.current.y;
+
+            setPan(p => ({ x: p.x + dx, y: p.y + dy }));
+            lastMousePos.current = { x: e.clientX, y: e.clientY };
+        }
+    };
+
+    const handleMouseUp = () => {
+        setIsPanning(false);
+    };
+
     return (
-        <div className="w-full h-full overflow-auto bg-neutral-950 p-20 flex items-start justify-center gap-16 min-w-full min-h-full">
-            {screens.length === 0 ? (
-                <div className="text-neutral-500 mt-20">No screens. Add one to start.</div>
-            ) : (
-                screens.map(screen => (
+        <div
+            className="w-full h-full overflow-hidden bg-neutral-950 relative cursor-default"
+            onWheel={handleWheel}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+        >
+            <div
+                className="absolute top-0 left-0 transition-transform duration-75 ease-out origin-top-left will-change-transform"
+                style={{
+                    transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`
+                }}
+            >
+                {screens.map(screen => (
                     <ScreenContainer
                         key={screen.id}
                         screen={screen}
                         isActive={screen.id === activeScreenId}
                     />
-                ))
+                ))}
+            </div>
+
+            {/* Controls Overlay */}
+            <div className="absolute bottom-4 right-4 flex gap-2">
+                <div className="bg-neutral-800 text-white px-3 py-1 rounded text-xs font-mono opacity-50">
+                    {Math.round(zoom * 100)}%
+                </div>
+            </div>
+
+            {screens.length === 0 && (
+                <div className="absolute inset-0 flex items-center justify-center text-neutral-500 pointer-events-none">
+                    No screens. Add one to start.
+                </div>
             )}
         </div>
     );

@@ -154,14 +154,16 @@ export function ScreenContainer({ screen, isActive }: Props) {
             ref={setNodeRef}
             id={screen.id} // Important for geometry calculation
             className={cn(
-                "relative bg-white shadow-2xl transition-all duration-300 overflow-hidden",
-                isActive ? "ring-4 ring-blue-500/50 scale-100 z-10" : "opacity-80 scale-95 hover:opacity-100 hover:scale-[0.98]",
+                "absolute bg-white shadow-2xl transition-shadow duration-300 overflow-hidden",
+                isActive ? "ring-4 ring-blue-500/50 z-10" : "opacity-90 hover:opacity-100",
                 isOver && "ring-4 ring-green-500/50"
             )}
             style={{
+                left: screen.position.x,
+                top: screen.position.y,
                 width: screen.dimensions.width,
                 height: screen.dimensions.height,
-                borderRadius: screen.dimensions.width > 1000 ? 0 : 40, // Simple heuristic for rounded corners
+                borderRadius: screen.dimensions.width > 1000 ? 0 : 40,
                 cursor: activeTool === 'rectangle' ? 'crosshair' : 'default'
             }}
             onMouseDown={handleMouseDown}

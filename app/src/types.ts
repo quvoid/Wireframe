@@ -29,6 +29,7 @@ export interface WireframeScreen {
     name: string;
     devicePreset: DevicePreset;
     dimensions: BoxSize;
+    position: Position;
     background: string;
     components: WireframeComponent[];
 }

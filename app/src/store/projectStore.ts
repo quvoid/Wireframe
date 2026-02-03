@@ -47,11 +47,19 @@ export const useProjectStore = create<ProjectState>((set) => ({
 
     addScreen: (preset = 'iphone-14-pro') => set((state) => {
         const presetData = DEVICE_PRESETS[preset] || DEVICE_PRESETS['iphone-14-pro'];
+
+        // Calculate position: simpler approach, just put it to the right of the last screen + 100px
+        const lastScreen = state.project.screens[state.project.screens.length - 1];
+        const position = lastScreen
+            ? { x: lastScreen.position.x + lastScreen.dimensions.width + 100, y: lastScreen.position.y }
+            : { x: 100, y: 100 };
+
         const newScreen: WireframeScreen = {
             id: uuidv4(),
             name: `Screen ${state.project.screens.length + 1}`,
             devicePreset: preset,
             dimensions: presetData.dimensions,
+            position,
             background: '#ffffff',
             components: []
         };
