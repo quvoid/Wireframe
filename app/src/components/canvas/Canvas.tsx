@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useProjectStore } from '../../store/projectStore';
 import { ScreenContainer } from './ScreenContainer';
+import { Minus, Plus } from 'lucide-react';
 
 
 export function Canvas() {
@@ -95,10 +96,28 @@ export function Canvas() {
             </div>
 
             {/* Controls Overlay */}
-            <div className="absolute bottom-4 right-4 flex gap-2">
-                <div className="bg-neutral-800 text-white px-3 py-1 rounded text-xs font-mono opacity-50">
+            <div className="absolute bottom-4 right-4 flex items-center gap-2 bg-neutral-800 p-1.5 rounded-lg border border-neutral-700 shadow-lg">
+                <button
+                    className="p-1.5 hover:bg-neutral-700 rounded text-neutral-300 hover:text-white transition-colors"
+                    onClick={() => setZoom(z => Math.max(0.1, z - 0.1))}
+                    title="Zoom Out"
+                >
+                    <Minus size={16} />
+                </button>
+                <div
+                    className="px-2 text-xs font-mono text-neutral-300 min-w-[3ch] text-center cursor-pointer hover:text-white"
+                    onClick={() => setZoom(1)}
+                    title="Reset to 100%"
+                >
                     {Math.round(zoom * 100)}%
                 </div>
+                <button
+                    className="p-1.5 hover:bg-neutral-700 rounded text-neutral-300 hover:text-white transition-colors"
+                    onClick={() => setZoom(z => Math.min(5, z + 0.1))}
+                    title="Zoom In"
+                >
+                    <Plus size={16} />
+                </button>
             </div>
 
             {screens.length === 0 && (
