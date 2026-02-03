@@ -18,6 +18,7 @@ interface ProjectState {
 
     addComponent: (screenId: string, component: Omit<WireframeComponent, 'id'>) => void;
     updateComponent: (screenId: string, componentId: string, updates: Partial<Omit<WireframeComponent, 'id'>>) => void;
+    removeComponent: (screenId: string, componentId: string) => void;
 
     selectComponent: (id: string, multi?: boolean) => void;
     deselectAll: () => void;
@@ -130,6 +131,24 @@ export const useProjectStore = create<ProjectState>((set) => ({
                 ...state.project,
                 screens: updatedScreens
             }
+        };
+    }),
+
+    removeComponent: (screenId, componentId) => set((state) => {
+        const updatedScreens = state.project.screens.map(screen => {
+            if (screen.id !== screenId) return screen;
+            return {
+                ...screen,
+                components: screen.components.filter(c => c.id !== componentId)
+            };
+        });
+
+        return {
+            project: {
+                ...state.project,
+                screens: updatedScreens
+            },
+            selectedComponentIds: state.selectedComponentIds.filter(id => id !== componentId)
         };
     }),
 

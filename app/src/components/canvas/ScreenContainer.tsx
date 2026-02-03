@@ -17,8 +17,17 @@ export function ScreenContainer({ screen, isActive }: Props) {
     const activeTool = useProjectStore(state => state.activeTool);
     const setTool = useProjectStore(state => state.setTool);
     const addComponent = useProjectStore(state => state.addComponent);
+    const updateComponent = useProjectStore(state => state.updateComponent);
 
     const [isDrawing, setIsDrawing] = useState(false);
+    const [dragState, setDragState] = useState<{
+        type: 'move' | 'resize';
+        componentId: string;
+        startMouse: { x: number; y: number };
+        initialPos: { x: number; y: number; w: number; h: number };
+        handle?: string;
+    } | null>(null);
+
     const [startPos, setStartPos] = useState({ x: 0, y: 0 });
     const [currentPos, setCurrentPos] = useState({ x: 0, y: 0 });
 
@@ -47,6 +56,44 @@ export function ScreenContainer({ screen, isActive }: Props) {
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
             setCurrentPos({ x, y });
+        } else if (dragState) {
+            const dx = e.clientX - dragState.startMouse.x;
+            const dy = e.clientY - dragState.startMouse.y;
+
+            if (dragState.type === 'move') {
+                updateComponent(screen.id, dragState.componentId, {
+                    position: {
+                        x: dragState.initialPos.x + dx,
+                        y: dragState.initialPos.y + dy
+                    }
+                });
+            } else if (dragState.type === 'resize' && dragState.handle) {
+                // Resize logic
+                const { x, y, w, h } = dragState.initialPos;
+                let newX = x;
+                let newY = y;
+                let newW = w;
+                let newH = h;
+
+                // Simple implementation for SE handle (bottom-right) first, then others
+                if (dragState.handle.includes('e')) newW = Math.max(10, w + dx);
+                if (dragState.handle.includes('s')) newH = Math.max(10, h + dy);
+                if (dragState.handle.includes('w')) {
+                    const deltaX = Math.min(dx, w - 10);
+                    newX = x + deltaX;
+                    newW = w - deltaX;
+                }
+                if (dragState.handle.includes('n')) {
+                    const deltaY = Math.min(dy, h - 10);
+                    newY = y + deltaY;
+                    newH = h - deltaY;
+                }
+
+                updateComponent(screen.id, dragState.componentId, {
+                    position: { x: newX, y: newY },
+                    size: { width: newW, height: newH }
+                });
+            }
         }
     };
 
@@ -69,7 +116,29 @@ export function ScreenContainer({ screen, isActive }: Props) {
                 });
                 setTool('select');
             }
+        } else if (dragState) {
+            setDragState(null);
         }
+    };
+
+    const handleCompMouseDown = (e: React.MouseEvent, comp: any, handle?: string) => {
+        if (activeTool !== 'select') return;
+        e.stopPropagation();
+
+        selectComponent(comp.id);
+
+        setDragState({
+            type: handle ? 'resize' : 'move',
+            componentId: comp.id,
+            startMouse: { x: e.clientX, y: e.clientY },
+            initialPos: {
+                x: comp.position.x,
+                y: comp.position.y,
+                w: comp.size.width,
+                h: comp.size.height
+            },
+            handle
+        });
     };
 
     const { setNodeRef, isOver } = useDroppable({
@@ -124,12 +193,35 @@ export function ScreenContainer({ screen, isActive }: Props) {
                                 height: comp.size.height,
                                 zIndex: 1
                             }}
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                selectComponent(comp.id);
-                            }}
+                            // Remove onClick, use onMouseDown on the overlay div
+                            onMouseDown={(e) => handleCompMouseDown(e, comp)}
                         >
                             <WireframeComponentRenderer component={comp} />
+
+                            {/* Resize Handles */}
+                            {isSelected && (
+                                <>
+                                    <div className="absolute -inset-0.5 border-2 border-blue-500 pointer-events-none" />
+                                    {/* Handles */}
+                                    {['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'].map(h => (
+                                        <div
+                                            key={h}
+                                            className={cn(
+                                                "absolute w-2.5 h-2.5 bg-white border border-blue-500 z-10",
+                                                h === 'nw' && "-top-1.5 -left-1.5 cursor-nw-resize",
+                                                h === 'n' && "-top-1.5 left-1/2 -translate-x-1/2 cursor-n-resize",
+                                                h === 'ne' && "-top-1.5 -right-1.5 cursor-ne-resize",
+                                                h === 'e' && "top-1/2 -right-1.5 -translate-y-1/2 cursor-e-resize",
+                                                h === 'se' && "-bottom-1.5 -right-1.5 cursor-se-resize",
+                                                h === 's' && "-bottom-1.5 left-1/2 -translate-x-1/2 cursor-s-resize",
+                                                h === 'sw' && "-bottom-1.5 -left-1.5 cursor-sw-resize",
+                                                h === 'w' && "top-1/2 -left-1.5 -translate-y-1/2 cursor-w-resize",
+                                            )}
+                                            onMouseDown={(e) => handleCompMouseDown(e, comp, h)}
+                                        />
+                                    ))}
+                                </>
+                            )}
                         </div>
                     );
                 })}
