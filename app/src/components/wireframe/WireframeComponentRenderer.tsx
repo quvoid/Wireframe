@@ -62,6 +62,49 @@ export function WireframeComponentRenderer({ component }: Props) {
                     {component.properties.text || 'Text'}
                 </div>
             );
+        case 'image':
+            return (
+                <div className="w-full h-full bg-neutral-200 flex items-center justify-center relative overflow-hidden group">
+                    <div className="absolute inset-0 flex items-center justify-center text-neutral-400">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                            <circle cx="8.5" cy="8.5" r="1.5" />
+                            <polyline points="21 15 16 10 5 21" />
+                        </svg>
+                    </div>
+                    {component.properties.text && (
+                        <span className="absolute bottom-2 left-2 text-[10px] bg-black/50 text-white px-1 rounded">
+                            {component.properties.text}
+                        </span>
+                    )}
+                </div>
+            );
+        case 'avatar':
+            return (
+                <div className="w-full h-full bg-neutral-300 rounded-full flex items-center justify-center overflow-hidden border border-neutral-200">
+                    <svg width="60%" height="60%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-neutral-500">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                        <circle cx="12" cy="7" r="4" />
+                    </svg>
+                </div>
+            );
+        case 'toggle':
+            return (
+                <div className="w-full h-full flex items-center">
+                    <div className={`w-11 h-6 rounded-full p-1 transition-colors ${component.properties.value ? 'bg-blue-600' : 'bg-neutral-300'}`}>
+                        <div className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform ${component.properties.value ? 'translate-x-5' : 'translate-x-0'}`} />
+                    </div>
+                </div>
+            );
+        case 'checkbox':
+            return (
+                <div className="w-full h-full flex items-center gap-2">
+                    <div className={`w-5 h-5 border rounded flex items-center justify-center ${component.properties.value ? 'bg-blue-600 border-blue-600 text-white' : 'border-neutral-400 bg-white'}`}>
+                        {component.properties.value && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>}
+                    </div>
+                    {component.properties.label && <span className="text-sm">{component.properties.label}</span>}
+                </div>
+            );
         default:
             return (
                 <div className="w-full h-full border-2 border-dashed border-red-300 bg-red-50 flex items-center justify-center text-xs text-red-500">

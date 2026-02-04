@@ -25,6 +25,14 @@ interface ProjectState {
 
     selectComponent: (id: string, multi?: boolean) => void;
     deselectAll: () => void;
+
+    // History
+    past: Project[];
+    future: Project[];
+    undo: () => void;
+    redo: () => void;
+    canUndo: () => boolean;
+    canRedo: () => boolean;
 }
 
 const initialProject: Project = {
@@ -37,19 +45,57 @@ const initialProject: Project = {
     },
 };
 
-export const useProjectStore = create<ProjectState>((set) => ({
+export const useProjectStore = create<ProjectState>((set, get) => ({
     project: initialProject,
     activeScreenId: null,
     selectedComponentIds: [],
     activeTool: 'select',
+    past: [],
+    future: [],
+
+    canUndo: () => get().past.length > 0,
+
+    canRedo: () => get().future.length > 0,
+
+    undo: () => set((state) => {
+        if (state.past.length === 0) return {};
+
+        const previous = state.past[state.past.length - 1];
+        const newPast = state.past.slice(0, -1);
+
+        return {
+            project: previous,
+            past: newPast,
+            future: [state.project, ...state.future]
+        };
+    }),
+
+    redo: () => set((state) => {
+        if (state.future.length === 0) return {};
+
+        const next = state.future[0];
+        const newFuture = state.future.slice(1);
+
+        return {
+            project: next,
+            past: [...state.past, state.project],
+            future: newFuture
+        };
+    }),
 
     createProject: (name) => set({
         project: { ...initialProject, id: uuidv4(), name },
-        activeScreenId: null
+        activeScreenId: null,
+        past: [],
+        future: []
     }),
 
     addScreen: (preset = 'iphone-14-pro') => set((state) => {
         const presetData = DEVICE_PRESETS[preset] || DEVICE_PRESETS['iphone-14-pro'];
+
+        // Save history before change
+        const past = [...state.past, state.project];
+        const future: Project[] = []; // Clear future on new action
 
         // Calculate position: simpler approach, just put it to the right of the last screen + 100px
         const lastScreen = state.project.screens[state.project.screens.length - 1];
@@ -72,7 +118,9 @@ export const useProjectStore = create<ProjectState>((set) => ({
                 ...state.project,
                 screens: [...state.project.screens, newScreen]
             },
-            activeScreenId: newScreen.id
+            activeScreenId: newScreen.id,
+            past,
+            future
         };
     }),
 
@@ -80,6 +128,10 @@ export const useProjectStore = create<ProjectState>((set) => ({
     setTool: (tool) => set({ activeTool: tool }),
 
     updateScreen: (screenId, updates) => set((state) => {
+        // Save history before change
+        const past = [...state.past, state.project];
+        const future: Project[] = [];
+
         const updatedScreens = state.project.screens.map(screen => {
             if (screen.id !== screenId) return screen;
 
@@ -100,11 +152,16 @@ export const useProjectStore = create<ProjectState>((set) => ({
             project: {
                 ...state.project,
                 screens: updatedScreens
-            }
+            },
+            past,
+            future
         };
     }),
 
     addComponent: (screenId, componentData) => set((state) => {
+        const past = [...state.past, state.project];
+        const future: Project[] = [];
+
         const newComponent: WireframeComponent = {
             ...componentData,
             id: uuidv4()
@@ -122,11 +179,16 @@ export const useProjectStore = create<ProjectState>((set) => ({
             project: {
                 ...state.project,
                 screens: updatedScreens
-            }
+            },
+            past,
+            future
         };
     }),
 
     updateComponent: (screenId, componentId, updates) => set((state) => {
+        const past = [...state.past, state.project];
+        const future: Project[] = [];
+
         const updatedScreens = state.project.screens.map(screen => {
             if (screen.id !== screenId) return screen;
             return {
@@ -141,11 +203,16 @@ export const useProjectStore = create<ProjectState>((set) => ({
             project: {
                 ...state.project,
                 screens: updatedScreens
-            }
+            },
+            past,
+            future
         };
     }),
 
     removeComponent: (screenId, componentId) => set((state) => {
+        const past = [...state.past, state.project];
+        const future: Project[] = [];
+
         const updatedScreens = state.project.screens.map(screen => {
             if (screen.id !== screenId) return screen;
             return {
@@ -159,11 +226,16 @@ export const useProjectStore = create<ProjectState>((set) => ({
                 ...state.project,
                 screens: updatedScreens
             },
-            selectedComponentIds: state.selectedComponentIds.filter(id => id !== componentId)
+            selectedComponentIds: state.selectedComponentIds.filter(id => id !== componentId),
+            past,
+            future
         };
     }),
 
     addInteraction: (screenId, componentId, targetScreenId) => set((state) => {
+        const past = [...state.past, state.project];
+        const future: Project[] = [];
+
         const updatedScreens = state.project.screens.map(screen => {
             if (screen.id !== screenId) return screen;
             return {
@@ -175,10 +247,17 @@ export const useProjectStore = create<ProjectState>((set) => ({
                 )
             };
         });
-        return { project: { ...state.project, screens: updatedScreens } };
+        return {
+            project: { ...state.project, screens: updatedScreens },
+            past,
+            future
+        };
     }),
 
     removeInteraction: (screenId, componentId) => set((state) => {
+        const past = [...state.past, state.project];
+        const future: Project[] = [];
+
         const updatedScreens = state.project.screens.map(screen => {
             if (screen.id !== screenId) return screen;
             return {
@@ -190,7 +269,11 @@ export const useProjectStore = create<ProjectState>((set) => ({
                 })
             };
         });
-        return { project: { ...state.project, screens: updatedScreens } };
+        return {
+            project: { ...state.project, screens: updatedScreens },
+            past,
+            future
+        };
     }),
 
     selectComponent: (id, multi = false) => set((state) => ({

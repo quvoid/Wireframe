@@ -1,5 +1,5 @@
 import { useProjectStore } from '../../store/projectStore';
-import { MousePointer2, Type, Layout, Trash2 } from 'lucide-react';
+import { MousePointer2, Type, Layout, Trash2, ChevronDown, Layers, AppWindow } from 'lucide-react';
 import { DEVICE_PRESETS } from '../../constants/presets';
 import type { DevicePresetKey } from '../../constants/presets';
 
@@ -55,201 +55,231 @@ export function PropertiesPanel() {
     }
 
     return (
-        <aside className="w-72 border-l border-neutral-800 bg-neutral-900 flex flex-col z-20 shadow-xl">
-            <div className="p-4 border-b border-neutral-800 bg-neutral-900">
-                <h2 className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Properties</h2>
+        <aside className="w-72 border-l border-neutral-800 bg-neutral-900/95 backdrop-blur-sm flex flex-col z-20 shadow-xl overflow-hidden">
+            {/* Header */}
+            <div className="h-10 px-4 border-b border-neutral-800 flex items-center bg-neutral-900/50">
+                <h2 className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Properties</h2>
             </div>
 
-            <div className="flex-1 p-4 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto no-scrollbar">
                 {!selectedComponent ? (
-                    <div className="flex flex-col items-center justify-center h-48 text-neutral-500 text-sm gap-2">
-                        <MousePointer2 size={24} className="opacity-20" />
-                        <span>Select an element to edit</span>
+                    <div className="flex flex-col items-center justify-center h-64 text-neutral-600 text-sm gap-3 p-8 text-center">
+                        <div className="w-12 h-12 bg-neutral-800/50 rounded-full flex items-center justify-center mb-2">
+                            <MousePointer2 size={20} className="opacity-40" />
+                        </div>
+                        <p>Select an element on the canvas to edit its properties</p>
                     </div>
                 ) : (
-                    <div className="space-y-6">
-                        {/* Header info */}
-                        <div className="flex items-center justify-between pb-4 border-b border-neutral-800">
-                            <span className="font-semibold text-sm capitalize">{selectedComponent.type}</span>
-                            <span className="text-xs text-neutral-500 font-mono">{selectedComponent.id.slice(0, 8)}</span>
+                    <div className="pb-8">
+                        {/* Info Header */}
+                        <div className="px-4 py-3 border-b border-neutral-800 bg-neutral-800/20">
+                            <div className="flex items-center justify-between">
+                                <span className="font-medium text-sm capitalize flex items-center gap-2 text-white">
+                                    {selectedComponent.type === 'button' && <MousePointer2 size={14} className="text-blue-400" />}
+                                    {selectedComponent.type === 'input' && <Type size={14} className="text-green-400" />}
+                                    {selectedComponent.type}
+                                </span>
+                                <span className="text-[10px] text-neutral-500 font-mono bg-neutral-900 px-1.5 py-0.5 rounded border border-neutral-800">
+                                    {selectedComponent.id.slice(0, 6)}
+                                </span>
+                            </div>
                         </div>
 
-                        {/* Position & Size */}
-                        <div className="space-y-3">
-                            <h3 className="text-xs font-bold text-neutral-500 uppercase flex items-center gap-1">
+                        {/* Layout Section */}
+                        <div className="p-4 border-b border-neutral-800/50">
+                            <h3 className="text-[10px] font-bold text-neutral-500 uppercase flex items-center gap-2 mb-3">
                                 <Layout size={12} /> Layout
                             </h3>
-                            <div className="grid grid-cols-2 gap-2">
+                            <div className="grid grid-cols-2 gap-3">
                                 <div className="space-y-1">
-                                    <label className="text-[10px] text-neutral-400">X</label>
+                                    <label className="text-[10px] text-neutral-400 pl-0.5">X</label>
                                     <input
                                         type="number"
                                         value={selectedComponent.position.x}
                                         onChange={(e) => handlePosChange('x', parseInt(e.target.value))}
-                                        className="w-full bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-xs text-white"
+                                        className="w-full bg-neutral-950 border border-neutral-800 rounded px-2 py-1.5 text-xs text-white focus:border-blue-500 focus:outline-none transition-colors"
                                     />
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-[10px] text-neutral-400">Y</label>
+                                    <label className="text-[10px] text-neutral-400 pl-0.5">Y</label>
                                     <input
                                         type="number"
                                         value={selectedComponent.position.y}
                                         onChange={(e) => handlePosChange('y', parseInt(e.target.value))}
-                                        className="w-full bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-xs text-white"
+                                        className="w-full bg-neutral-950 border border-neutral-800 rounded px-2 py-1.5 text-xs text-white focus:border-blue-500 focus:outline-none transition-colors"
                                     />
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-[10px] text-neutral-400">W</label>
+                                    <label className="text-[10px] text-neutral-400 pl-0.5">W</label>
                                     <input
                                         type="number"
                                         value={selectedComponent.size.width}
-                                        className="w-full bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-xs text-white opacity-50 cursor-not-allowed"
+                                        className="w-full bg-neutral-900 border border-neutral-800 rounded px-2 py-1.5 text-xs text-neutral-500 cursor-not-allowed"
                                         readOnly
                                     />
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-[10px] text-neutral-400">H</label>
+                                    <label className="text-[10px] text-neutral-400 pl-0.5">H</label>
                                     <input
                                         type="number"
                                         value={selectedComponent.size.height}
-                                        className="w-full bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-xs text-white opacity-50 cursor-not-allowed"
+                                        className="w-full bg-neutral-900 border border-neutral-800 rounded px-2 py-1.5 text-xs text-neutral-500 cursor-not-allowed"
                                         readOnly
                                     />
                                 </div>
                             </div>
                         </div>
 
-                        {/* Specific Properties */}
-                        <div className="space-y-3">
-                            <h3 className="text-xs font-bold text-neutral-500 uppercase flex items-center gap-1">
-                                <Type size={12} /> Content
+                        {/* Content Section */}
+                        <div className="p-4 border-b border-neutral-800/50">
+                            <h3 className="text-[10px] font-bold text-neutral-500 uppercase flex items-center gap-2 mb-3">
+                                <Layers size={12} /> Component Settings
                             </h3>
+                            <div className="space-y-3">
+                                {/* BUTTON */}
+                                {selectedComponent.type === 'button' && (
+                                    <>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] text-neutral-400 pl-0.5">Label</label>
+                                            <input
+                                                type="text"
+                                                value={selectedComponent.properties.text || ''}
+                                                onChange={(e) => handlePropChange('text', e.target.value)}
+                                                className="w-full bg-neutral-950 border border-neutral-800 rounded px-2 py-1.5 text-sm text-white focus:border-blue-500 focus:outline-none transition-colors"
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] text-neutral-400 pl-0.5">Variant</label>
+                                            <div className="relative">
+                                                <select
+                                                    value={selectedComponent.properties.variant || 'primary'}
+                                                    onChange={(e) => handlePropChange('variant', e.target.value)}
+                                                    className="w-full appearance-none bg-neutral-950 border border-neutral-800 rounded px-2 py-1.5 text-sm text-white focus:border-blue-500 focus:outline-none transition-colors"
+                                                >
+                                                    <option value="primary">Primary</option>
+                                                    <option value="secondary">Secondary</option>
+                                                    <option value="outline">Outline</option>
+                                                </select>
+                                                <ChevronDown size={14} className="absolute right-2 top-2 text-neutral-500 pointer-events-none" />
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
 
-                            {/* BUTTON */}
-                            {selectedComponent.type === 'button' && (
-                                <>
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] text-neutral-400">Text</label>
-                                        <input
-                                            type="text"
-                                            value={selectedComponent.properties.text || ''}
-                                            onChange={(e) => handlePropChange('text', e.target.value)}
-                                            className="w-full bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-sm text-white"
-                                        />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] text-neutral-400">Variant</label>
-                                        <select
-                                            value={selectedComponent.properties.variant || 'primary'}
-                                            onChange={(e) => handlePropChange('variant', e.target.value)}
-                                            className="w-full bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-sm text-white"
-                                        >
-                                            <option value="primary">Primary</option>
-                                            <option value="secondary">Secondary</option>
-                                            <option value="outline">Outline</option>
-                                        </select>
-                                    </div>
-                                </>
-                            )}
+                                {/* INPUT */}
+                                {selectedComponent.type === 'input' && (
+                                    <>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] text-neutral-400 pl-0.5">Label Text</label>
+                                            <input
+                                                type="text"
+                                                value={selectedComponent.properties.label || ''}
+                                                onChange={(e) => handlePropChange('label', e.target.value)}
+                                                className="w-full bg-neutral-950 border border-neutral-800 rounded px-2 py-1.5 text-sm text-white focus:border-blue-500 focus:outline-none transition-colors"
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] text-neutral-400 pl-0.5">Placeholder</label>
+                                            <input
+                                                type="text"
+                                                value={selectedComponent.properties.placeholder || ''}
+                                                onChange={(e) => handlePropChange('placeholder', e.target.value)}
+                                                className="w-full bg-neutral-950 border border-neutral-800 rounded px-2 py-1.5 text-sm text-white focus:border-blue-500 focus:outline-none transition-colors"
+                                            />
+                                        </div>
+                                    </>
+                                )}
 
-                            {/* INPUT */}
-                            {selectedComponent.type === 'input' && (
-                                <>
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] text-neutral-400">Label</label>
-                                        <input
-                                            type="text"
-                                            value={selectedComponent.properties.label || ''}
-                                            onChange={(e) => handlePropChange('label', e.target.value)}
-                                            className="w-full bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-sm text-white"
-                                        />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] text-neutral-400">Placeholder</label>
-                                        <input
-                                            type="text"
-                                            value={selectedComponent.properties.placeholder || ''}
-                                            onChange={(e) => handlePropChange('placeholder', e.target.value)}
-                                            className="w-full bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-sm text-white"
-                                        />
-                                    </div>
-                                </>
-                            )}
+                                {/* CARD */}
+                                {selectedComponent.type === 'card' && (
+                                    <>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] text-neutral-400 pl-0.5">Title</label>
+                                            <input
+                                                type="text"
+                                                value={selectedComponent.properties.title || ''}
+                                                onChange={(e) => handlePropChange('title', e.target.value)}
+                                                className="w-full bg-neutral-950 border border-neutral-800 rounded px-2 py-1.5 text-sm text-white focus:border-blue-500 focus:outline-none transition-colors"
+                                            />
+                                        </div>
+                                    </>
+                                )}
 
-                            {/* CARD */}
-                            {selectedComponent.type === 'card' && (
-                                <>
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] text-neutral-400">Title</label>
-                                        <input
-                                            type="text"
-                                            value={selectedComponent.properties.title || ''}
-                                            onChange={(e) => handlePropChange('title', e.target.value)}
-                                            className="w-full bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-sm text-white"
-                                        />
-                                    </div>
-                                </>
-                            )}
-
-                            {/* TEXT */}
-                            {selectedComponent.type === 'text' && (
-                                <>
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] text-neutral-400">Text</label>
-                                        <textarea
-                                            value={selectedComponent.properties.text || ''}
-                                            onChange={(e) => handlePropChange('text', e.target.value)}
-                                            className="w-full bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-sm text-white min-h-[60px]"
-                                        />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] text-neutral-400">Font Size</label>
-                                        <input
-                                            type="number"
-                                            value={selectedComponent.properties.fontSize || 16}
-                                            onChange={(e) => handlePropChange('fontSize', parseInt(e.target.value))}
-                                            className="w-full bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-sm text-white"
-                                        />
-                                    </div>
-                                </>
-                            )}
+                                {/* TEXT */}
+                                {selectedComponent.type === 'text' && (
+                                    <>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] text-neutral-400 pl-0.5">Content</label>
+                                            <textarea
+                                                value={selectedComponent.properties.text || ''}
+                                                onChange={(e) => handlePropChange('text', e.target.value)}
+                                                className="w-full bg-neutral-950 border border-neutral-800 rounded px-2 py-1.5 text-sm text-white min-h-[80px] focus:border-blue-500 focus:outline-none transition-colors resize-none"
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] text-neutral-400 pl-0.5">Font Size (px)</label>
+                                            <input
+                                                type="number"
+                                                value={selectedComponent.properties.fontSize || 16}
+                                                onChange={(e) => handlePropChange('fontSize', parseInt(e.target.value))}
+                                                className="w-full bg-neutral-950 border border-neutral-800 rounded px-2 py-1.5 text-sm text-white focus:border-blue-500 focus:outline-none transition-colors"
+                                            />
+                                        </div>
+                                    </>
+                                )}
+                            </div>
                         </div>
 
-                        <div className="pt-4 mt-4 border-t border-neutral-800">
-                            <button className="w-full flex items-center justify-center gap-2 py-2 bg-red-900/20 text-red-500 rounded border border-red-900/50 hover:bg-red-900/40 text-xs font-medium">
-                                <Trash2 size={12} />
-                                Delete Component
-                            </button>
+                        {/* Actions */}
+                        <div className="p-4">
+                            <div className="pt-2">
+                                <button
+                                    className="w-full flex items-center justify-center gap-2 py-2 bg-red-500/10 text-red-400 rounded-md border border-red-500/20 hover:bg-red-500/20 hover:border-red-500/30 transition-all text-xs font-medium"
+                                    onClick={() => { /* Consider adding a confirmation or direct delete */ }}
+                                >
+                                    <Trash2 size={12} />
+                                    Delete Component
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}
 
-                {/* Screen Props if nothing selected */}
+                {/* Screen Props (Always visible at bottom or when nothing selected? usually visible when screen is active but no component) 
+                    Re-designed to always show if activeScreen exists but only if nothing else selected for clarity
+                */}
                 {!selectedComponent && activeScreen && (
-                    <div className="mt-8 pt-8 border-t border-neutral-800 space-y-4">
-                        <div className="flex items-center justify-between pb-2">
-                            <span className="font-semibold text-sm">Screen Properties</span>
+                    <div className="border-t border-neutral-800 mt-2">
+                        <div className="px-4 py-3 bg-neutral-800/20 border-b border-neutral-800">
+                            <h3 className="text-xs font-bold text-neutral-400 flex items-center gap-2">
+                                <AppWindow size={14} /> Screen Settings
+                            </h3>
                         </div>
-                        <div className="space-y-1">
-                            <label className="text-[10px] text-neutral-400">Name</label>
-                            <input
-                                type="text"
-                                value={activeScreen.name}
-                                readOnly
-                                className="w-full bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-sm text-white"
-                            />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-[10px] text-neutral-400">Preset</label>
-                            <select
-                                value={activeScreen.devicePreset}
-                                onChange={(e) => updateScreen(activeScreen.id, { devicePreset: e.target.value as DevicePresetKey })}
-                                className="w-full bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-sm text-white"
-                            >
-                                {Object.entries(DEVICE_PRESETS).map(([key, preset]) => (
-                                    <option key={key} value={key}>{preset.name}</option>
-                                ))}
-                            </select>
+                        <div className="p-4 space-y-4">
+                            <div className="space-y-1">
+                                <label className="text-[10px] text-neutral-400 pl-0.5">Name</label>
+                                <input
+                                    type="text"
+                                    value={activeScreen.name}
+                                    readOnly // Editable later
+                                    className="w-full bg-neutral-950 border border-neutral-800 rounded px-2 py-1.5 text-sm text-neutral-300 focus:outline-none focus:border-neutral-700"
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[10px] text-neutral-400 pl-0.5">Device Frame</label>
+                                <div className="relative">
+                                    <select
+                                        value={activeScreen.devicePreset}
+                                        onChange={(e) => updateScreen(activeScreen.id, { devicePreset: e.target.value as DevicePresetKey })}
+                                        className="w-full appearance-none bg-neutral-950 border border-neutral-800 rounded px-2 py-1.5 text-sm text-white focus:border-blue-500 focus:outline-none transition-colors"
+                                    >
+                                        {Object.entries(DEVICE_PRESETS).map(([key, preset]) => (
+                                            <option key={key} value={key}>{preset.name}</option>
+                                        ))}
+                                    </select>
+                                    <ChevronDown size={14} className="absolute right-2 top-2 text-neutral-500 pointer-events-none" />
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useProjectStore } from '../../store/projectStore';
 import { ScreenContainer } from './ScreenContainer';
-import { Minus, Plus } from 'lucide-react';
+import { Minus, Plus, Layout } from 'lucide-react';
 
 
 export function Canvas() {
@@ -10,11 +10,13 @@ export function Canvas() {
     const selectedComponentIds = useProjectStore(state => state.selectedComponentIds);
     const removeComponent = useProjectStore(state => state.removeComponent);
     const addInteraction = useProjectStore(state => state.addInteraction);
+    const activeTool = useProjectStore(state => state.activeTool);
 
 
     const [pan, setPan] = useState({ x: 0, y: 0 });
     const [zoom, setZoom] = useState(1);
     const [isPanning, setIsPanning] = useState(false);
+    const [isSpacePressed, setIsSpacePressed] = useState(false);
 
     // Prototyping State
     const [interactionSource, setInteractionSource] = useState<{ screenId: string, componentId: string, startPos: { x: number, y: number } } | null>(null);
@@ -25,6 +27,10 @@ export function Canvas() {
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.code === 'Space' && !e.repeat && (e.target as HTMLElement).tagName !== 'INPUT' && (e.target as HTMLElement).tagName !== 'TEXTAREA') {
+                setIsSpacePressed(true);
+            }
+
             if ((e.key === 'Delete' || e.key === 'Backspace') && selectedComponentIds.length > 0 && activeScreenId) {
                 const target = e.target as HTMLElement;
                 if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
@@ -35,8 +41,18 @@ export function Canvas() {
             }
         };
 
+        const handleKeyUp = (e: KeyboardEvent) => {
+            if (e.code === 'Space') {
+                setIsSpacePressed(false);
+            }
+        };
+
         window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
+        window.addEventListener('keyup', handleKeyUp);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('keyup', handleKeyUp);
+        };
     }, [selectedComponentIds, activeScreenId, removeComponent]);
 
     const handleWheel = (e: React.WheelEvent) => {
@@ -55,8 +71,19 @@ export function Canvas() {
     };
 
     const handleMouseDown = (e: React.MouseEvent) => {
-        // Middle mouse button
-        if (e.button === 1 || (e.button === 0 && e.altKey)) {
+        // Panning conditions:
+        // 1. Middle Mouse (button 1)
+        // 2. Alt + Click
+        // 3. Spacebar Pressed + Left Click
+        // 4. Background Click (Left Click) + Select Tool
+        const isBackgroundClick = e.target === e.currentTarget;
+
+        if (
+            e.button === 1 ||
+            (e.button === 0 && e.altKey) ||
+            (e.button === 0 && isSpacePressed) ||
+            (e.button === 0 && isBackgroundClick && activeTool === 'select')
+        ) {
             e.preventDefault();
             setIsPanning(true);
             lastMousePos.current = { x: e.clientX, y: e.clientY };
@@ -81,12 +108,15 @@ export function Canvas() {
     };
 
     const onComponentInteractionStart = (screenId: string, componentId: string, componentRect: { x: number, y: number, w: number, h: number }) => {
+        const screen = screens.find(s => s.id === screenId);
+        if (!screen) return;
+
         setInteractionSource({
             screenId,
             componentId,
             startPos: {
-                x: componentRect.x + componentRect.w,
-                y: componentRect.y + componentRect.h / 2
+                x: screen.position.x + componentRect.x + componentRect.w,
+                y: screen.position.y + componentRect.y + componentRect.h / 2
             }
         });
     };
@@ -107,7 +137,8 @@ export function Canvas() {
 
     return (
         <div
-            className="w-full h-full overflow-hidden bg-neutral-950 relative cursor-default"
+            className={`w-full h-full overflow-hidden bg-neutral-950 relative ${isPanning ? 'cursor-grabbing' : isSpacePressed ? 'cursor-grab' : 'cursor-default'
+                }`}
             onWheel={handleWheel}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
@@ -185,33 +216,41 @@ export function Canvas() {
             </div>
 
             {/* Controls Overlay */}
-            <div className="absolute bottom-4 right-4 flex items-center gap-2 bg-neutral-800 p-1.5 rounded-lg border border-neutral-700 shadow-lg">
+            <div className="absolute bottom-6 right-6 flex items-center gap-1 bg-neutral-900/80 backdrop-blur-md p-1 rounded-xl border border-neutral-800/50 shadow-2xl">
                 <button
-                    className="p-1.5 hover:bg-neutral-700 rounded text-neutral-300 hover:text-white transition-colors"
+                    className="p-2 hover:bg-white/10 rounded-lg text-neutral-400 hover:text-white transition-all disabled:opacity-50 active:scale-95"
                     onClick={() => setZoom(z => Math.max(0.1, z - 0.1))}
                     title="Zoom Out"
+                    disabled={zoom <= 0.1}
                 >
                     <Minus size={16} />
                 </button>
                 <div
-                    className="px-2 text-xs font-mono text-neutral-300 min-w-[3ch] text-center cursor-pointer hover:text-white"
+                    className="px-2 text-xs font-mono font-medium text-neutral-300 min-w-[4ch] text-center cursor-pointer hover:text-blue-400 transition-colors select-none"
                     onClick={() => setZoom(1)}
                     title="Reset to 100%"
                 >
                     {Math.round(zoom * 100)}%
                 </div>
                 <button
-                    className="p-1.5 hover:bg-neutral-700 rounded text-neutral-300 hover:text-white transition-colors"
+                    className="p-2 hover:bg-white/10 rounded-lg text-neutral-400 hover:text-white transition-all disabled:opacity-50 active:scale-95"
                     onClick={() => setZoom(z => Math.min(5, z + 0.1))}
                     title="Zoom In"
+                    disabled={zoom >= 5}
                 >
                     <Plus size={16} />
                 </button>
             </div>
 
             {screens.length === 0 && (
-                <div className="absolute inset-0 flex items-center justify-center text-neutral-500 pointer-events-none">
-                    No screens. Add one to start.
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-neutral-500 gap-4">
+                    <div className="w-16 h-16 bg-neutral-900 rounded-2xl flex items-center justify-center border border-neutral-800 shadow-xl">
+                        <Layout size={32} className="opacity-50" />
+                    </div>
+                    <div className="text-center">
+                        <p className="font-medium text-neutral-400 mb-1">Canvas is empty</p>
+                        <p className="text-sm opacity-60">Add a screen to start designing</p>
+                    </div>
                 </div>
             )}
         </div>

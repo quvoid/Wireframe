@@ -136,6 +136,7 @@ export function ScreenContainer({ screen, isActive, ...props }: Props) {
     const handleCompMouseDown = (e: React.MouseEvent, comp: any, handle?: string) => {
         if (activeTool === 'prototype') {
             e.stopPropagation();
+            e.preventDefault();
             if (props.onInteractionStart) {
                 const rect = {
                     x: comp.position.x,
