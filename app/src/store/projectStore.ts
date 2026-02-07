@@ -30,6 +30,12 @@ interface ProjectState {
     // Alignment Actions
     alignComponents: (type: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom' | 'distribute-h' | 'distribute-v') => void;
 
+
+
+    // Grouping
+    groupComponents: () => void;
+    ungroupComponents: () => void;
+
     selectComponent: (id: string, multi?: boolean) => void;
     deselectAll: () => void;
 
@@ -171,6 +177,95 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         };
     }),
 
+    groupComponents: () => set((state) => {
+        if (state.selectedComponentIds.length < 2) return {};
+
+        const activeScreen = state.project.screens.find(s => s.id === state.activeScreenId);
+        if (!activeScreen) return {};
+
+        const selectedComponents = activeScreen.components.filter(c => state.selectedComponentIds.includes(c.id));
+        if (selectedComponents.length < 2) return {}; // Need 2+ to group
+
+        // 1. Calculate Bounds
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        selectedComponents.forEach(c => {
+            minX = Math.min(minX, c.position.x);
+            minY = Math.min(minY, c.position.y);
+            maxX = Math.max(maxX, c.position.x + c.size.width);
+            maxY = Math.max(maxY, c.position.y + c.size.height);
+        });
+
+        const groupComponent: WireframeComponent = {
+            id: uuidv4(),
+            type: 'group',
+            name: 'Group',
+            position: { x: minX, y: minY },
+            size: { width: maxX - minX, height: maxY - minY },
+            properties: {},
+            children: selectedComponents.map(c => c.id)
+        };
+
+        // 2. Update hierarchy
+        const updatedScreens = state.project.screens.map(s => {
+            if (s.id !== state.activeScreenId) return s;
+
+            // Add group, update children parentId
+            const updatedComponents = s.components.map(c => {
+                if (state.selectedComponentIds.includes(c.id)) {
+                    return { ...c, parentId: groupComponent.id };
+                }
+                return c;
+            });
+
+            return {
+                ...s,
+                components: [...updatedComponents, groupComponent]
+            };
+        });
+
+        // 3. Select the new group
+        return {
+            project: { ...state.project, screens: updatedScreens },
+            selectedComponentIds: [groupComponent.id],
+            past: [...state.past, state.project],
+            future: []
+        };
+    }),
+
+    ungroupComponents: () => set((state) => {
+        const activeScreen = state.project.screens.find(s => s.id === state.activeScreenId);
+        if (!activeScreen || state.selectedComponentIds.length !== 1) return {};
+
+        const groupId = state.selectedComponentIds[0];
+        const groupComponent = activeScreen.components.find(c => c.id === groupId);
+
+        if (!groupComponent || groupComponent.type !== 'group' || !groupComponent.children) return {};
+
+        const updatedScreens = state.project.screens.map(s => {
+            if (s.id !== state.activeScreenId) return s;
+
+            // Remove group, unset parentId for children
+            const updatedComponents = s.components
+                .filter(c => c.id !== groupId)
+                .map(c => {
+                    if (c.parentId === groupId) {
+                        const { parentId, ...rest } = c;
+                        return rest;
+                    }
+                    return c;
+                });
+
+            return { ...s, components: updatedComponents };
+        });
+
+        return {
+            project: { ...state.project, screens: updatedScreens },
+            selectedComponentIds: groupComponent.children, // Select children
+            past: [...state.past, state.project],
+            future: []
+        };
+    }),
+
     createProject: (name) => set({
         project: { ...initialProject, id: uuidv4(), name },
         activeScreenId: null,
@@ -294,13 +389,49 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         const past = [...state.past, state.project];
         const future: Project[] = [];
 
-        const updatedScreens = state.project.screens.map(screen => {
-            if (screen.id !== screenId) return screen;
+        // Check if we are moving a group
+        const screen = state.project.screens.find(s => s.id === screenId);
+        if (!screen) return {};
+
+        const component = screen.components.find(c => c.id === componentId);
+        if (!component) return {};
+
+        let additionalUpdates: Record<string, any> = {};
+
+        // If moving a group, move children
+        if (component.type === 'group' && updates.position && component.children) {
+            const dx = updates.position.x - component.position.x;
+            const dy = updates.position.y - component.position.y;
+
+            // We need to map over components to update children.
+            // But we do it inside the main map below to avoid double iteration issues?
+            // Actually, we can prep a lookup.
+            additionalUpdates = { dx, dy, children: component.children };
+        }
+
+        const updatedScreens = state.project.screens.map(s => {
+            if (s.id !== screenId) return s;
             return {
-                ...screen,
-                components: screen.components.map(comp =>
-                    comp.id === componentId ? { ...comp, ...updates } : comp
-                )
+                ...s,
+                components: s.components.map(comp => {
+                    // Update the target component
+                    if (comp.id === componentId) {
+                        return { ...comp, ...updates };
+                    }
+
+                    // Update children if their group moved
+                    if (additionalUpdates.children && additionalUpdates.children.includes(comp.id)) {
+                        return {
+                            ...comp,
+                            position: {
+                                x: comp.position.x + additionalUpdates.dx,
+                                y: comp.position.y + additionalUpdates.dy
+                            }
+                        };
+                    }
+
+                    return comp;
+                })
             };
         });
 

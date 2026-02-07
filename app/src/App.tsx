@@ -215,9 +215,18 @@ function App() {
               <Code size={16} />
             </button>
 
-            <button className="bg-white text-black px-4 py-1.5 rounded-md text-xs font-semibold hover:bg-neutral-200 transition-colors flex items-center gap-2">
+            <button
+              onClick={() => {
+                const activeScreen = project.screens.find(s => s.id === useProjectStore.getState().activeScreenId);
+                if (activeScreen) {
+                  import('./utils/export').then(mod => mod.exportScreenToImage(activeScreen.id, activeScreen.name));
+                }
+              }}
+              className="bg-white text-black px-4 py-1.5 rounded-md text-xs font-semibold hover:bg-neutral-200 transition-colors flex items-center gap-2"
+              title="Export Screen as PNG"
+            >
               <Share2 size={14} />
-              Share
+              Export
             </button>
           </div>
         </header>

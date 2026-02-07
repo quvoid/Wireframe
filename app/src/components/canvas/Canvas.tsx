@@ -40,6 +40,18 @@ export function Canvas() {
                     removeComponent(activeScreenId, id);
                 });
             }
+
+            // Grouping: Ctrl+G
+            if ((e.ctrlKey || e.metaKey) && e.key === 'g' && !e.shiftKey) {
+                e.preventDefault();
+                useProjectStore.getState().groupComponents();
+            }
+
+            // Ungrouping: Ctrl+Shift+G
+            if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'G') {
+                e.preventDefault();
+                useProjectStore.getState().ungroupComponents();
+            }
         };
 
         const handleKeyUp = (e: KeyboardEvent) => {
