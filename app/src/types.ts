@@ -38,6 +38,7 @@ export interface WireframeScreen {
     position: Position;
     background: string;
     components: WireframeComponent[];
+    interaction?: Interaction;
 }
 
 export interface Project {
@@ -47,5 +48,10 @@ export interface Project {
     metadata: {
         createdAt: string;
         updatedAt: string;
+    };
+    theme: {
+        primaryColor: string;
+        borderRadius: string; // '0px' | '4px' | '8px' | '99px'
+        fontFamily: string;
     };
 }

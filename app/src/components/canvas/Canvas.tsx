@@ -10,6 +10,7 @@ export function Canvas() {
     const selectedComponentIds = useProjectStore(state => state.selectedComponentIds);
     const removeComponent = useProjectStore(state => state.removeComponent);
     const addInteraction = useProjectStore(state => state.addInteraction);
+    const updateScreen = useProjectStore(state => state.updateScreen);
     const activeTool = useProjectStore(state => state.activeTool);
 
 
@@ -19,7 +20,7 @@ export function Canvas() {
     const [isSpacePressed, setIsSpacePressed] = useState(false);
 
     // Prototyping State
-    const [interactionSource, setInteractionSource] = useState<{ screenId: string, componentId: string, startPos: { x: number, y: number } } | null>(null);
+    const [interactionSource, setInteractionSource] = useState<{ screenId: string, componentId: string | null, startPos: { x: number, y: number } } | null>(null);
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
     // State to track middle mouse drag
@@ -90,6 +91,15 @@ export function Canvas() {
         }
     };
 
+    const [draggingScreen, setDraggingScreen] = useState<{
+        id: string;
+        startX: number;
+        startY: number;
+        initialPos: { x: number; y: number };
+    } | null>(null);
+
+
+
     const handleMouseMove = (e: React.MouseEvent) => {
         if (isPanning) {
             const dx = e.clientX - lastMousePos.current.x;
@@ -97,6 +107,16 @@ export function Canvas() {
 
             setPan(p => ({ x: p.x + dx, y: p.y + dy }));
             lastMousePos.current = { x: e.clientX, y: e.clientY };
+        } else if (draggingScreen) {
+            const dx = (e.clientX - draggingScreen.startX) / zoom;
+            const dy = (e.clientY - draggingScreen.startY) / zoom;
+
+            updateScreen(draggingScreen.id, {
+                position: {
+                    x: draggingScreen.initialPos.x + dx,
+                    y: draggingScreen.initialPos.y + dy
+                }
+            });
         }
 
         if (interactionSource) {
@@ -107,7 +127,7 @@ export function Canvas() {
         }
     };
 
-    const onComponentInteractionStart = (screenId: string, componentId: string, componentRect: { x: number, y: number, w: number, h: number }) => {
+    const onComponentInteractionStart = (screenId: string, componentId: string | null, componentRect: { x: number, y: number, w: number, h: number }) => {
         const screen = screens.find(s => s.id === screenId);
         if (!screen) return;
 
@@ -128,8 +148,23 @@ export function Canvas() {
         }
     };
 
+    const onScreenDragStart = (id: string, e: React.MouseEvent) => {
+        if (activeTool !== 'select') return;
+        e.stopPropagation();
+        const screen = screens.find(s => s.id === id);
+        if (!screen) return;
+
+        setDraggingScreen({
+            id,
+            startX: e.clientX,
+            startY: e.clientY,
+            initialPos: { ...screen.position }
+        });
+    };
+
     const handleMouseUp = () => {
         setIsPanning(false);
+        setDraggingScreen(null);
         if (interactionSource) {
             setInteractionSource(null);
         }
@@ -158,48 +193,90 @@ export function Canvas() {
                         isActive={screen.id === activeScreenId}
                         onInteractionStart={onComponentInteractionStart}
                         onInteractionDrop={onScreenInteractionDrop}
+                        onScreenDragStart={onScreenDragStart}
                     />
                 ))}
 
                 {/* Interaction Layer (SVG) */}
                 <svg className="absolute inset-0 pointer-events-none overflow-visible" style={{ zIndex: 100 }}>
-                    {screens.flatMap(sourceScreen =>
-                        sourceScreen.components
-                            .filter(c => c.interaction?.action === 'navigate')
-                            .map(c => {
-                                const targetScreen = screens.find(s => s.id === c.interaction?.targetScreenId);
-                                if (!targetScreen) return null;
+                    {screens.flatMap(sourceScreen => {
+                        const interactions = [
+                            // Component Interactions
+                            ...sourceScreen.components
+                                .filter(c => c.interaction?.action === 'navigate')
+                                .map(c => ({
+                                    sourceId: c.id,
+                                    targetId: c.interaction?.targetScreenId,
+                                    startX: sourceScreen.position.x + c.position.x + (c.size.width / 2),
+                                    startY: sourceScreen.position.y + c.position.y + (c.size.height / 2)
+                                })),
+                            // Screen Interactions
+                            ...(sourceScreen.interaction?.action === 'navigate' ? [{
+                                sourceId: 'screen',
+                                targetId: sourceScreen.interaction.targetScreenId,
+                                startX: sourceScreen.position.x + sourceScreen.dimensions.width,
+                                startY: sourceScreen.position.y + (sourceScreen.dimensions.height / 2)
+                            }] : [])
+                        ];
 
-                                // Calculate positions
-                                // Source: Center of component (relative to canvas)
-                                const startX = sourceScreen.position.x + c.position.x + (c.size.width / 2);
-                                const startY = sourceScreen.position.y + c.position.y + (c.size.height / 2);
+                        return interactions.map(interaction => {
+                            const targetScreen = screens.find(s => s.id === interaction.targetId);
+                            if (!targetScreen) return null;
 
-                                // Target: Top-Left of target screen (or left-center)
-                                const endX = targetScreen.position.x;
-                                const endY = targetScreen.position.y + (targetScreen.dimensions.height / 2);
+                            // Target: Top-Left of target screen (or left-center)
+                            const endX = targetScreen.position.x;
+                            const endY = targetScreen.position.y + (targetScreen.dimensions.height / 2);
 
-                                // Bezier Curve
-                                const controlPoint1 = { x: startX + 100, y: startY };
-                                const controlPoint2 = { x: endX - 100, y: endY };
+                            // Bezier Curve
+                            const controlPoint1 = { x: interaction.startX + 100, y: interaction.startY };
+                            const controlPoint2 = { x: endX - 100, y: endY };
 
-                                const path = `M ${startX} ${startY} C ${controlPoint1.x} ${controlPoint1.y}, ${controlPoint2.x} ${controlPoint2.y}, ${endX} ${endY}`;
+                            const path = `M ${interaction.startX} ${interaction.startY} C ${controlPoint1.x} ${controlPoint1.y}, ${controlPoint2.x} ${controlPoint2.y}, ${endX} ${endY}`;
 
-                                return (
-                                    <g key={`${c.id}-${targetScreen.id}`}>
-                                        <path
-                                            d={path}
-                                            stroke="#3b82f6"
-                                            strokeWidth="2"
-                                            fill="none"
-                                            strokeDasharray="4 4"
-                                        />
-                                        <circle cx={startX} cy={startY} r="4" fill="#3b82f6" />
-                                        <polygon points={`${endX},${endY} ${endX - 10},${endY - 5} ${endX - 10},${endY + 5}`} fill="#3b82f6" />
-                                    </g>
-                                );
-                            })
-                    )}
+                            // Midpoint for delete button
+                            const midX = (interaction.startX + endX) / 2;
+                            const midY = (interaction.startY + endY) / 2;
+
+                            return (
+                                <g key={`${sourceScreen.id}-${interaction.sourceId}-${targetScreen.id}`} className="group pointer-events-auto">
+                                    {/* Invisible Hit Path */}
+                                    <path
+                                        d={path}
+                                        stroke="transparent"
+                                        strokeWidth="20"
+                                        fill="none"
+                                        className="cursor-pointer"
+                                    />
+
+                                    {/* Visible Path */}
+                                    <path
+                                        d={path}
+                                        stroke="#3b82f6"
+                                        strokeWidth="2"
+                                        fill="none"
+                                        strokeDasharray="4 4"
+                                    />
+                                    <circle cx={interaction.startX} cy={interaction.startY} r="4" fill="#3b82f6" />
+                                    <polygon points={`${endX},${endY} ${endX - 10},${endY - 5} ${endX - 10},${endY + 5}`} fill="#3b82f6" />
+
+                                    {/* Delete Button (Always Visible in Prototype Mode) */}
+                                    {activeTool === 'prototype' && (
+                                        <g
+                                            className="cursor-pointer hover:opacity-80 transition-opacity"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                const componentId = interaction.sourceId === 'screen' ? null : interaction.sourceId;
+                                                useProjectStore.getState().removeInteraction(sourceScreen.id, componentId);
+                                            }}
+                                        >
+                                            <circle cx={midX} cy={midY} r="10" fill="#ef4444" className="shadow-md" />
+                                            <path d={`M ${midX - 4} ${midY - 4} L ${midX + 4} ${midY + 4} M ${midX + 4} ${midY - 4} L ${midX - 4} ${midY + 4}`} stroke="white" strokeWidth="2" strokeLinecap="round" />
+                                        </g>
+                                    )}
+                                </g>
+                            );
+                        });
+                    })}
 
                     {/* Ghost Line */}
                     {interactionSource && (
@@ -251,6 +328,31 @@ export function Canvas() {
                         <p className="font-medium text-neutral-400 mb-1">Canvas is empty</p>
                         <p className="text-sm opacity-60">Add a screen to start designing</p>
                     </div>
+                </div>
+            )}
+
+            {/* Alignment Toolbar (Visible when multi-selection) */}
+            {selectedComponentIds.length > 1 && (
+                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-neutral-900/90 backdrop-blur-md p-1.5 rounded-xl border border-neutral-800 shadow-2xl z-50">
+                    {[
+                        { id: 'left', icon: '|<' },
+                        { id: 'center', icon: '-|-' },
+                        { id: 'right', icon: '>|' },
+                        { id: 'top', icon: '͞' },
+                        { id: 'middle', icon: '-' },
+                        { id: 'bottom', icon: '_' },
+                        { id: 'distribute-h', icon: '|=|' },
+                        { id: 'distribute-v', icon: '☰' },
+                    ].map((action) => (
+                        <button
+                            key={action.id}
+                            onClick={() => useProjectStore.getState().alignComponents(action.id as any)}
+                            className="p-2 hover:bg-white/10 rounded-lg text-neutral-400 hover:text-white transition-colors"
+                            title={`Align ${action.id}`}
+                        >
+                            <span className="text-xs font-mono font-bold">{action.icon}</span>
+                        </button>
+                    ))}
                 </div>
             )}
         </div>

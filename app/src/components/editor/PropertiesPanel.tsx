@@ -1,14 +1,16 @@
 import { useProjectStore } from '../../store/projectStore';
-import { MousePointer2, Type, Layout, Trash2, ChevronDown, Layers, AppWindow } from 'lucide-react';
+import { MousePointer2, Type, Layout, Trash2, ChevronDown, Layers, AppWindow, Palette, Plus } from 'lucide-react';
 import { DEVICE_PRESETS } from '../../constants/presets';
 import type { DevicePresetKey } from '../../constants/presets';
 
 export function PropertiesPanel() {
     const activeScreenId = useProjectStore(state => state.activeScreenId);
     const selectedComponentIds = useProjectStore(state => state.selectedComponentIds);
-    const project = useProjectStore(state => state.project);
     const updateComponent = useProjectStore(state => state.updateComponent);
     const updateScreen = useProjectStore(state => state.updateScreen);
+    const removeComponent = useProjectStore(state => state.removeComponent);
+    const project = useProjectStore(state => state.project);
+    const updateTheme = useProjectStore(state => state.updateTheme);
 
     // Find the selected component
     // For now support single selection editing
@@ -46,16 +48,23 @@ export function PropertiesPanel() {
 
     if (!activeScreenId) {
         return (
-            <aside className="w-72 border-l border-neutral-800 bg-neutral-900 flex flex-col z-20">
-                <div className="flex-1 flex items-center justify-center text-neutral-500 text-sm">
-                    No Screen Selected
+            <aside className="w-full h-full bg-neutral-900 flex flex-col z-20">
+                <div className="flex-1 flex flex-col items-center justify-center text-neutral-500 text-sm gap-4">
+                    <span>No Screen Selected</span>
+                    <button
+                        onClick={() => useProjectStore.getState().addScreen()}
+                        className="flex items-center gap-2 py-2 px-4 bg-blue-600 hover:bg-blue-500 text-white rounded-md text-xs font-semibold shadow-sm transition-all active:scale-95"
+                    >
+                        <Plus size={14} />
+                        Create New Screen
+                    </button>
                 </div>
             </aside>
         );
     }
 
     return (
-        <aside className="w-72 border-l border-neutral-800 bg-neutral-900/95 backdrop-blur-sm flex flex-col z-20 shadow-xl overflow-hidden">
+        <aside className="w-full h-full bg-neutral-900/95 backdrop-blur-sm flex flex-col z-20 shadow-xl overflow-hidden">
             {/* Header */}
             <div className="h-10 px-4 border-b border-neutral-800 flex items-center bg-neutral-900/50">
                 <h2 className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Properties</h2>
@@ -261,25 +270,35 @@ export function PropertiesPanel() {
                                 <input
                                     type="text"
                                     value={activeScreen.name}
-                                    readOnly // Editable later
-                                    className="w-full bg-neutral-950 border border-neutral-800 rounded px-2 py-1.5 text-sm text-neutral-300 focus:outline-none focus:border-neutral-700"
+                                    onChange={(e) => updateScreen(activeScreen.id, { name: e.target.value })}
+                                    className="w-full bg-neutral-950 border border-neutral-800 rounded px-2 py-1.5 text-sm text-neutral-300 focus:outline-none focus:border-neutral-700 focus:text-white transition-colors"
                                 />
                             </div>
                             <div className="space-y-1">
                                 <label className="text-[10px] text-neutral-400 pl-0.5">Device Frame</label>
                                 <div className="relative">
                                     <select
-                                        value={activeScreen.devicePreset}
-                                        onChange={(e) => updateScreen(activeScreen.id, { devicePreset: e.target.value as DevicePresetKey })}
-                                        className="w-full appearance-none bg-neutral-950 border border-neutral-800 rounded px-2 py-1.5 text-sm text-white focus:border-blue-500 focus:outline-none transition-colors"
+                                        value={activeScreen.devicePreset || 'iphone-14-pro'}
+                                        onChange={(e) => updateScreen(activeScreen.id, { devicePreset: e.target.value as any })}
+                                        className="w-full appearance-none bg-neutral-950 border border-neutral-800 rounded px-2 py-1.5 text-xs text-white focus:border-blue-500 focus:outline-none transition-colors cursor-pointer"
                                     >
-                                        {Object.entries(DEVICE_PRESETS).map(([key, preset]) => (
-                                            <option key={key} value={key}>{preset.name}</option>
-                                        ))}
+                                        <option value="iphone-14-pro">iPhone 14 Pro</option>
+                                        <option value="desktop-hd">Desktop (1280x720)</option>
+                                        <option value="desktop-fhd">Desktop FHD (1920x1080)</option>
+                                        <option value="iphone-se">iPhone SE</option>
+                                        <option value="ipad-mini">iPad Mini</option>
+                                        <option value="custom">Custom</option>
                                     </select>
                                     <ChevronDown size={14} className="absolute right-2 top-2 text-neutral-500 pointer-events-none" />
                                 </div>
                             </div>
+                            <button
+                                onClick={() => useProjectStore.getState().addScreen(activeScreen.devicePreset)}
+                                className="w-full flex items-center justify-center gap-2 py-2 mt-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded-md text-xs font-medium transition-colors border border-neutral-700"
+                            >
+                                <Plus size={12} />
+                                Add Another Screen
+                            </button>
                         </div>
                     </div>
                 )}

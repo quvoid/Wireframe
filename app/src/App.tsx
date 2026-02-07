@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useProjectStore } from './store/projectStore';
-import { Layout, Undo, Redo } from 'lucide-react';
+import { Layout, Undo, Redo, Code, Share2 } from 'lucide-react';
 import { Canvas } from './components/canvas/Canvas';
 import { Sidebar } from './components/editor/Sidebar';
 import { PropertiesPanel } from './components/editor/PropertiesPanel';
+import { CodePanel } from './components/editor/CodePanel';
+import { MagicBar } from './components/editor/MagicBar';
 import { DndContext, DragOverlay, useSensor, useSensors, PointerSensor, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core';
 import { WireframeComponentRenderer } from './components/wireframe/WireframeComponentRenderer';
 import type { WireframeComponent } from './types';
+import { ResizablePanel } from './components/layout/ResizablePanel';
 
 function App() {
   const project = useProjectStore(state => state.project);
@@ -52,6 +55,7 @@ function App() {
   );
 
   const [activeDragType, setActiveDragType] = useState<string | null>(null);
+  const [showCodePanel, setShowCodePanel] = useState(false);
 
   useEffect(() => {
     // Add a default screen if none exists
@@ -121,6 +125,12 @@ function App() {
         } else if (type === 'checkbox') {
           size = { width: 24, height: 24 };
           properties = { value: false, label: 'Check' };
+        } else if (type === 'checkbox') {
+          size = { width: 24, height: 24 };
+          properties = { value: false, label: 'Check' };
+        } else if (type === 'sticky-note') {
+          size = { width: 160, height: 160 };
+          properties = { text: 'Note...', color: '#fef3c7' }; // yellow-100 equivalent
         } else if (type === 'line') {
           size = { width: 200, height: 20 };
           properties = {};
@@ -128,7 +138,7 @@ function App() {
 
         addComponent(screenId, {
           type,
-          name: type.charAt(0).toUpperCase() + type.slice(1),
+          name: type === 'sticky-note' ? 'Note' : type.charAt(0).toUpperCase() + type.slice(1),
           position: { x, y },
           size,
           properties,
@@ -150,7 +160,8 @@ function App() {
         activeDragType === 'card' ? { title: 'Card' } :
           activeDragType === 'image' ? { text: 'Image' } :
             activeDragType === 'avatar' ? { borderRadius: 'full' } :
-              { text: 'Text' }
+              activeDragType === 'sticky-note' ? { text: 'Note...', color: '#fef3c7' } :
+                { text: 'Text' }
   } : null;
 
   return (
@@ -196,7 +207,16 @@ function App() {
               </div>
             </div>
 
-            <button className="bg-white text-black px-4 py-1.5 rounded-md text-xs font-semibold hover:bg-neutral-200 transition-colors">
+            <button
+              onClick={() => setShowCodePanel(!showCodePanel)}
+              className={`p-2 rounded-md transition-colors ${showCodePanel ? 'bg-blue-600 text-white' : 'hover:bg-neutral-800 text-neutral-400'}`}
+              title="Toggle Code View"
+            >
+              <Code size={16} />
+            </button>
+
+            <button className="bg-white text-black px-4 py-1.5 rounded-md text-xs font-semibold hover:bg-neutral-200 transition-colors flex items-center gap-2">
+              <Share2 size={14} />
               Share
             </button>
           </div>
@@ -204,16 +224,26 @@ function App() {
 
         {/* Main Workspace - Added top padding for fixed header */}
         <div className="flex-1 flex overflow-hidden pt-16">
-          <Sidebar />
+          <ResizablePanel side="left" defaultWidth={256} minWidth={200} maxWidth={400}>
+            <Sidebar />
+          </ResizablePanel>
 
           {/* Center - Canvas Area */}
           <main className="flex-1 bg-neutral-950 relative overflow-hidden flex flex-col shadow-inner">
             <Canvas />
           </main>
 
-          {/* Right Sidebar - Properties */}
-          <PropertiesPanel />
+
+          {/* Right Sidebar - Properties or Code */}
+          <ResizablePanel side="right" defaultWidth={320} minWidth={280} maxWidth={500}>
+            {showCodePanel ? (
+              <CodePanel />
+            ) : (
+              <PropertiesPanel />
+            )}
+          </ResizablePanel>
         </div>
+        <MagicBar />
       </div>
       <DragOverlay>
         {activeDragType ? (

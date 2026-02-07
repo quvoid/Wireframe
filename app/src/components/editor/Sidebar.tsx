@@ -12,6 +12,7 @@ const SIDEBAR_ITEMS = [
     { type: 'avatar', label: 'Avatar' },
     { type: 'toggle', label: 'Switch' },
     { type: 'checkbox', label: 'Checkbox' },
+    { type: 'sticky-note', label: 'Note' },
     { type: 'line', label: 'Divider' },
 ];
 
@@ -20,7 +21,7 @@ export function Sidebar() {
     const setTool = useProjectStore(state => state.setTool);
 
     return (
-        <aside className="w-64 border-r border-neutral-800 bg-neutral-900/95 backdrop-blur-sm flex flex-col z-20">
+        <aside className="w-full h-full bg-neutral-900/95 backdrop-blur-sm flex flex-col z-20">
             {/* Tools Section */}
             <div className="p-4 border-b border-neutral-800 space-y-3">
                 <h2 className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest px-1">Tools</h2>

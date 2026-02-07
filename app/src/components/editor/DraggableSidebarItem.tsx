@@ -1,7 +1,7 @@
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { cn } from '../../utils/cn';
-import { MousePointerClick, Type, CreditCard, Minus, Box, Image, UserCircle, ToggleRight, CheckSquare } from 'lucide-react';
+import { MousePointerClick, Type, CreditCard, Minus, Box, Image, UserCircle, ToggleRight, CheckSquare, StickyNote } from 'lucide-react';
 
 interface Props {
     type: string;
@@ -17,6 +17,7 @@ const ICONS: Record<string, React.ReactNode> = {
     avatar: <UserCircle size={16} />,
     toggle: <ToggleRight size={16} />,
     checkbox: <CheckSquare size={16} />,
+    'sticky-note': <StickyNote size={16} />,
     line: <Minus size={16} />,
 };
 
