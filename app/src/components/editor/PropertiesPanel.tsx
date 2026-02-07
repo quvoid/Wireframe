@@ -243,8 +243,12 @@ export function PropertiesPanel() {
                         <div className="p-4">
                             <div className="pt-2">
                                 <button
-                                    className="w-full flex items-center justify-center gap-2 py-2 bg-red-500/10 text-red-400 rounded-md border border-red-500/20 hover:bg-red-500/20 hover:border-red-500/30 transition-all text-xs font-medium"
-                                    onClick={() => { /* Consider adding a confirmation or direct delete */ }}
+                                    className="w-full flex items-center justify-center gap-2 py-2 bg-red-500/10 text-red-400 rounded-md border border-red-500/20 hover:bg-red-500/20 hover:border-red-500/30 transition-all text-xs font-medium active:scale-95"
+                                    onClick={() => {
+                                        if (activeScreen && selectedComponent) {
+                                            removeComponent(activeScreen.id, selectedComponent.id);
+                                        }
+                                    }}
                                 >
                                     <Trash2 size={12} />
                                     Delete Component
